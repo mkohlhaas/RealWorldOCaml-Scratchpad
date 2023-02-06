@@ -1,0 +1,4 @@
+(executable
+ (public_name variables_and_functions)
+ (name main)
+ (libraries variables_and_functions base stdio))
