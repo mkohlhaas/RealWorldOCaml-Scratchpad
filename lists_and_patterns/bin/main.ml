@@ -4,13 +4,22 @@ open Fn
 open Stdio
 (* open Core_bench (* uncomment to run benchmark tests *) *)
 
+(* Performance of String.concat and ^ *)
+(* More Useful List Functions *)
+
 let () = print_endline ""
+
+(* ---------------------------- List Basics ---------------------------------- *)
+
 let _r = [ 1; 2; 3 ]
 let empty = []
 let _r = 3 :: empty
 let _r = "three" :: empty
 let l = [ 1; 2; 3 ]
 let _m = 0 :: l
+
+(* -------------Using Patterns to Extract Data from a List ------------------- *)
+
 let rec sum l = match l with [] -> 0 | hd :: tl -> hd + sum tl
 let _r = sum [ 1; 2; 3 ]
 let _r = sum []
@@ -47,6 +56,11 @@ let rec _drop_zero l =
 let _r = drop_value [ 1; 2; 3 ] 2
 let _r = drop_value' [ 1; 2; 3 ] 2
 
+(* --------------- Limitations (and Blessings) of Pattern Matching ----------- *)
+
+(* Performance *)
+
+(* pattern-matching is fast *)
 let _plus_one_match x =
   match x with
   | 0 -> 1
@@ -66,7 +80,6 @@ let _plus_one_if x =
   else if x = 5 then 6
   else x + 1
 
-(* pattern-matching is fast *)
 (* uncomment to run benchmark tests *)
 
 (* let _r =
@@ -120,19 +133,24 @@ let max_widths header rows =
 let pad s length = s ^ String.make (length - String.length s) ' '
 let _r = pad "hello" 10 (* "hello     " *)
 
+(* ------------------- Using the List Module Effectively --------------------- *)
+
+(* render_row : string list -> int list -> string *)
 let render_row row widths =
   let padded = List.map2_exn row widths ~f:pad in
   "| " ^ String.concat ~sep:" | " padded ^ " |"
 
-(* - : string = "| Hello      | World           |" *)
+(* "| Hello      | World           |" *)
 let _r = render_row [ "Hello"; "World" ] [ 10; 15 ]
 
+(* render_separator : int list -> string *)
 let render_separator widths =
   let pieces = List.map widths ~f:(fun w -> String.make w '-') in
   "|-" ^ String.concat ~sep:"-+-" pieces ^ "-|"
 
 let _r = render_separator [ 3; 6; 2 ] (* "|-----+--------+----|" *)
 
+(* render_table : string list -> string list list -> string *)
 let render_table header rows =
   let widths = max_widths header rows in
   String.concat ~sep:"\n"
@@ -158,14 +176,20 @@ let _r = List.map2_exn ~f:Int.max [ 1; 2; 3 ] [ 3; 2; 1 ]
 (* let _r = List.map2_exn ~f:Int.max [1;2;3] [3;2;1;0] *)
 (* Exception: (Invalid_argument "length mismatch in map2_exn: 3 <> 4"). *)
 
+(* More Useful List Functions *)
+
 let _r = List.fold ~init:0 ~f:( + ) [ 1; 2; 3; 4 ]
 let _r = List.fold ~init:[] ~f:(fun acc hd -> hd :: acc) [ 1; 2; 3; 4 ]
-let _s = "." ^ "." ^ "." ^ "." ^ "." ^ "." ^ "."
-let _s = String.concat [ "."; "."; "."; "."; "."; "."; "." ]
 let _r = List.reduce ~f:( + ) [ 1; 2; 3; 4; 5 ]
 let _r = List.reduce ~f:( + ) []
 let _r = List.filter ~f:(fun x -> x % 2 = 0) [ 1; 2; 3; 4; 5 ]
 
+(* ---------------------- Performance of String.concat and ^ ------------------ *)
+
+let _s = "." ^ "." ^ "." ^ "." ^ "." ^ "." ^ "."
+let _s = String.concat [ "."; "."; "."; "."; "."; "."; "." ]
+
+(* extensions : string list -> string list *)
 let extensions filenames =
   List.filter_map filenames ~f:(fun fname ->
       match String.rsplit2 ~on:'.' fname with
@@ -174,6 +198,9 @@ let extensions filenames =
   |> List.dedup_and_sort ~compare:String.compare
 
 let _r = extensions [ "foo.c"; "foo.ml"; "bar.ml"; "bar.mli" ]
+(* ["c"; "ml"; "mli"] *)
+
+(* ----------------------------- Partitioning Lists --------------------------- *)
 
 let is_ocaml_source s =
   match String.rsplit2 s ~on:'.' with
@@ -181,10 +208,13 @@ let is_ocaml_source s =
   | _ -> false
 
 let _ml_files, _other_files =
-  List.partition_tf
+  List.partition_tf (* tf = true - false *)
     [ "foo.c"; "foo.ml"; "bar.ml"; "bar.mli" ]
     ~f:is_ocaml_source
 
+(* ------------------------------ Combining Lists ----------------------------- *)
+
+(* [1; 2; 3; 4; 5; 6] *)
 let _r = List.append [ 1; 2; 3 ] [ 4; 5; 6 ]
 let _r = [ 1; 2; 3 ] @ [ 4; 5; 6 ]
 let _r = List.concat [ [ 1; 2 ]; [ 3; 4; 5 ]; [ 6 ]; [] ]
@@ -207,6 +237,8 @@ let rec _ls_rec s =
     Sys_unix.ls_dir s
     |> List.concat_map ~f:(fun sub -> _ls_rec (Filename.concat s sub))
 
+(* ------------------------------ Tail Recursion ----------------------------- *)
+
 let rec length = function [] -> 0 | _ :: tl -> 1 + length tl
 let _r = length [ 1; 2; 3 ]
 let make_list n = List.init n ~f:id
@@ -215,13 +247,17 @@ let _r = length (make_list 10)
 (* let _r = length (make_list 10_000_000) *)
 (* Stack overflow during evaluation (looping recursion?). *)
 
-let rec length_plus_n l n =
-  match l with [] -> n | _ :: tl -> length_plus_n tl (n + 1)
+(* length_plus_n : 'a list -> int -> int *)
+let rec length_plus_n l acc =
+  match l with [] -> acc | _ :: tl -> length_plus_n tl (acc + 1)
 
 let length l = length_plus_n l 0
 let _r = length [ 1; 2; 3; 4 ]
 let _r = length (make_list 10_000_000)
 
+(* ------------------------ Terser and Faster Patterns ----------------------- *)
+
+(* _remove_sequential_duplicates : 'a list -> 'a list *)
 let rec _remove_sequential_duplicates list =
   match list with
   | [] -> []
@@ -230,7 +266,7 @@ let rec _remove_sequential_duplicates list =
       if first = second then _remove_sequential_duplicates (second :: tl)
       else first :: _remove_sequential_duplicates (second :: tl)
 
-(* using as patterns *)
+(* using as-patterns and function *)
 let rec _remove_sequential_duplicates = function
   | [] as l -> l
   | [ _ ] as l -> l
@@ -238,7 +274,7 @@ let rec _remove_sequential_duplicates = function
       if first = second then _remove_sequential_duplicates tl
       else first :: _remove_sequential_duplicates tl
 
-(* using or pattern *)
+(* using or-pattern *)
 let rec _remove_sequential_duplicates list =
   match list with
   | ([] | [ _ ]) as l -> l
@@ -254,32 +290,40 @@ let rec _remove_sequential_duplicates list =
       _remove_sequential_duplicates tl
   | first :: tl -> first :: _remove_sequential_duplicates tl
 
+(* ----------------------------- Polymorphic Compare ------------------------- *)
+
+let _r = 3 = 4
+
 (* works because of `open Base.Poly` *)
 let _r = "foo" = "bar"
-let _r = 3 = 4
 let _r = [ 1; 2; 3 ] = [ 1; 2; 3 ]
-let _r = _remove_sequential_duplicates [ 1; 2; 2; 3; 4; 3; 3 ]
+
 (* - : int list = [1; 2; 3; 4; 3] *)
+let _r = _remove_sequential_duplicates [ 1; 2; 2; 3; 4; 3; 3 ]
 
-let _r = _remove_sequential_duplicates [ "one"; "two"; "two"; "two"; "three" ]
 (* - : string list = ["one"; "two"; "three"] *)
+let _r = _remove_sequential_duplicates [ "one"; "two"; "two"; "two"; "three" ]
 
+(* We cannot compare functions. *)
 (* let _r = (fun x -> x + 1) = (fun x -> x + 1) *)
 (* Exception: (Invalid_argument "compare: functional value"). *)
 
-(* this pattern-matching is not exhaustive.Here is an example of a case that is not matched:_::_(However, some guarded clause may match this value.)
+(* this pattern-matching is not exhaustive.Here is an example of a case that is not matched:_::_
+   (However, some guarded clause may match this value.)
+
    let rec count_some list =
        match list with
        | [] -> 0
        | x :: tl when Option.is_none x -> count_some tl
        | x :: tl when Option.is_some x -> 1 + count_some tl *)
 
-(* let rec count_some list =
-    match list with
-    | [] -> 0
-    | x :: tl when Option.is_none x -> count_some tl
-    | x :: tl when Option.is_some x -> 1 + count_some tl
-    | x :: tl -> -1 (* unreachable *) *)
+(* Compiler won't complain any more but code is unreachable. *)
+let rec _count_some list =
+  match list with
+  | [] -> 0
+  | x :: tl when Option.is_none x -> _count_some tl
+  | x :: tl when Option.is_some x -> 1 + _count_some tl
+  | _x :: _tl -> -1 (* unreachable *)
 
 let rec _count_some l =
   match l with
@@ -287,6 +331,7 @@ let rec _count_some l =
   | x :: tl when Option.is_none x -> _count_some tl
   | _ :: tl -> 1 + _count_some tl
 
+(* `when` clauses can be useful, but we should prefer patterns  *)
 let rec _count_some l =
   match l with
   | [] -> 0
@@ -296,4 +341,5 @@ let rec _count_some l =
 let _r = _count_some [ Some 3; None; Some 4 ]
 (* - : int = 2 *)
 
+(* in real life we would use this, actually *)
 let _count_some l = List.count ~f:Option.is_some l
