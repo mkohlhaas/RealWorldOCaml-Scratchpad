@@ -1,4 +1,4 @@
 (executable
  (public_name lists_and_patterns)
  (name main)
- (libraries lists_and_patterns core core_bench stdio))
+ (libraries lists_and_patterns core core_bench stdio core_unix.sys_unix))
